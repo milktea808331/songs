@@ -9,48 +9,86 @@
     <style>
         :root { --gold: #e2b37e; --bg: #000; --panel: #161616; --border: #2a2a2a; }
         body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg); color: #fff; margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        .sidebar { width: 70px; background: #0a0a0a; display: flex; flex-direction: column; align-items: center; padding-top: 40px; border-right: 1px solid var(--border); flex-shrink: 0; }
-        .nav-item { margin-bottom: 35px; cursor: pointer; opacity: 0.3; transition: 0.3s; text-align: center; width: 100%; }
+        
+        .sidebar { width: 75px; background: #0a0a0a; display: flex; flex-direction: column; align-items: center; padding-top: 40px; border-right: 1px solid var(--border); flex-shrink: 0; }
+        .nav-item { margin-bottom: 35px; cursor: pointer; opacity: 0.3; transition: 0.3s; text-align: center; width: 100%; font-size: 13px; }
         .nav-item.active { opacity: 1; color: var(--gold); border-right: 3px solid var(--gold); }
+        
         .content-area { flex-grow: 1; overflow-y: auto; padding: 40px; }
-        .page { display: none; max-width: 900px; margin: auto; animation: fadeIn 0.4s ease; }
+        .page { display: none; max-width: 850px; margin: auto; animation: fadeIn 0.4s ease; }
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .header-section { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 30px; }
-        h1 { color: var(--gold); margin: 0; }
-        .name-box { background: var(--panel); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--gold); display: flex; align-items: center; gap: 10px; }
-        .song-card { background: var(--panel); padding: 18px; margin: 12px 0; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #222; }
-        .req-btn { border: 1.5px solid var(--gold); color: var(--gold); background: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+
+        h1 { color: var(--gold); text-align: center; margin-bottom: 30px; font-size: 26px; }
+        .section-box { background: var(--panel); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 25px; }
+        .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+
+        input { 
+            width: 100%; padding: 12px; background: #080808; border: 1px solid #333; border-radius: 8px; 
+            color: #fff; font-size: 16px; box-sizing: border-box; 
+        }
+        input:focus { border-color: var(--gold); outline: none; }
+
+        .filter-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+        .cat-btn { background: #1a1a1a; border: 1px solid #333; color: #999; padding: 6px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; }
+        .cat-btn.active { background: var(--gold); color: #000; font-weight: bold; border-color: var(--gold); }
+
+        .song-card { background: var(--panel); padding: 18px; margin-bottom: 10px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #222; }
+        .song-info b { font-size: 18px; display: block; margin-bottom: 4px; }
+        .song-info small { color: var(--gold); }
+        .req-btn { background: none; border: 1.5px solid var(--gold); color: var(--gold); padding: 8px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .req-btn:disabled { border-color: #444; color: #444; cursor: not-allowed; }
-        .cat-btn { background: #1a1a1a; border: 1px solid #333; color: #999; padding: 6px 15px; border-radius: 20px; cursor: pointer; margin: 0 5px 10px 0; }
-        .cat-btn.active { background: var(--gold); color: #000; }
-        .stats-table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 12px; overflow: hidden; }
-        .stats-table th { background: #1a1a1a; color: var(--gold); padding: 15px; text-align: left; }
-        .stats-table td { padding: 15px; border-bottom: 1px solid var(--border); }
+
+        .data-table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 12px; overflow: hidden; }
+        .data-table th { background: #1a1a1a; color: var(--gold); padding: 15px; text-align: left; font-size: 14px; border-bottom: 1px solid var(--border); }
+        .data-table td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 15px; }
+        .highlight { color: var(--gold); font-weight: bold; }
     </style>
 </head>
 <body>
     <nav class="sidebar">
-        <div class="nav-item active" onclick="switchPage('song-page', this)">🎵<br><small>歌單</small></div>
-        <div class="nav-item" onclick="switchPage('stats-page', this)">💎<br><small>排行</small></div>
+        <div class="nav-item active" onclick="switchPage('song-page', this)">🎵<br>歌單</div>
+        <div class="nav-item" onclick="switchPage('stats-page', this)">📊<br>紀錄</div>
     </nav>
+
     <main class="content-area">
         <div id="song-page" class="page active">
-            <div class="header-section"><h1>🎤 奶茶的歌單</h1></div>
-            <div class="name-box">
-                <span>👤 你的稱呼：</span>
-                <input type="text" id="viewerName" placeholder="請先輸入名字以解鎖點歌..." style="background:#000; color:#fff; border:1px solid #444; padding:5px 10px; border-radius:5px; flex-grow:1;" oninput="validateName(this.value)">
-                <small id="limit-text" style="color:var(--gold); margin-left:10px; font-weight:bold;"></small>
+            <h1>🎤 點歌清單</h1>
+            
+            <div class="section-box">
+                <div class="label-row">
+                    <span>👤 你的稱呼：</span>
+                    <b id="limit-text" style="color:var(--gold)">請輸入名字</b>
+                </div>
+                <input type="text" id="viewerName" placeholder="輸入暱稱以解鎖點歌..." oninput="saveNick(this.value)">
             </div>
-            <div id="categoryBtns"></div><div id="typeBtns"></div>
+
+            <div class="section-box">
+                <div class="label-row"><span>🔍 搜尋歌曲：</span></div>
+                <input type="text" id="searchInput" placeholder="搜尋歌名或歌手..." oninput="filterAndRender()">
+                <div id="categoryBtns" class="filter-group"></div>
+                <div id="typeBtns" class="filter-group"></div>
+            </div>
+
             <div id="songListDisplay">載入中...</div>
         </div>
+
         <div id="stats-page" class="page">
-            <div class="header-section"><h1>💎 珍珠資產排行</h1><p id="lastUpdateTime" style="color:var(--gold)">最後更新：尚未載入</p></div>
-            <table class="stats-table">
-                <thead><tr><th>觀眾暱稱</th><th>珍珠總額</th><th>簽到次數</th></tr></thead>
-                <tbody id="statsListDisplay"></tbody>
-            </table>
+            <h1>📊 觀眾數據紀錄</h1>
+            <div class="section-box">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>觀眾暱稱</th>
+                            <th>目前點數</th>
+                            <th>簽到總額</th>
+                            <th>喝水卷</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statsListDisplay"></tbody>
+                </table>
+                <p id="lastUpdateTime" style="text-align:center; color:#555; font-size:12px; margin-top:15px;">載入中...</p>
+            </div>
         </div>
     </main>
 
@@ -62,87 +100,83 @@
         let songs = [], curCat = '全部', curType = '全部', myPending = JSON.parse(localStorage.getItem('myPending') || '[]');
 
         db.ref('songList').on('value', snap => {
-            songs = [];
-            snap.forEach(c => { songs.push(c.val()); });
-            // 關鍵修改：歌手排序
-            songs.sort((a, b) => {
-                const artistCompare = a.artist.localeCompare(b.artist, 'zh-Hant');
-                return artistCompare !== 0 ? artistCompare : a.title.localeCompare(b.title, 'zh-Hant');
-            });
+            songs = []; snap.forEach(c => { songs.push(c.val()); });
+            songs.sort((a, b) => a.artist.localeCompare(b.artist, 'zh-Hant'));
             renderFilterBtns(); filterAndRender();
         });
 
+        // 核心修改：第一層分類加上「其他」
         function renderFilterBtns() {
-            const cats = ['全部', '中文', '古風', '台語'], types = ['全部', '男', '女', '樂團'];
+            const cats = ['全部', '中文', '古風', '台語', '其他'], types = ['全部', '男', '女', '樂團'];
             document.getElementById('categoryBtns').innerHTML = cats.map(c => `<button class="cat-btn ${curCat===c?'active':''}" onclick="curCat='${c}';renderFilterBtns();filterAndRender();">${c}</button>`).join('');
             document.getElementById('typeBtns').innerHTML = types.map(t => `<button class="cat-btn ${curType===t?'active':''}" onclick="curType='${t}';renderFilterBtns();filterAndRender();">${t}</button>`).join('');
         }
 
-        function validateName(val) {
-            localStorage.setItem('myNickname', val.trim());
-            filterAndRender();
-        }
+        function saveNick(val) { localStorage.setItem('myNickname', val.trim()); filterAndRender(); }
 
         function filterAndRender() {
-            const list = document.getElementById('songListDisplay'); list.innerHTML = '';
+            const list = document.getElementById('songListDisplay');
+            const searchKw = document.getElementById('searchInput').value.toLowerCase();
             const currentName = (document.getElementById('viewerName').value || "").trim();
-            let filtered = songs.filter(s => (curCat==='全部'||s.category===curCat) && (curType==='全部'||s.type===curType));
+            list.innerHTML = '';
             
+            let filtered = songs.filter(s => (curCat==='全部' || s.category===curCat) && (curType==='全部' || s.type===curType) && (s.title.toLowerCase().includes(searchKw) || s.artist.toLowerCase().includes(searchKw)));
+
             filtered.forEach(s => {
                 const canRequest = currentName.length > 0 && myPending.length < 2;
-                list.innerHTML += `<div class="song-card"><div><b>${s.title}</b><br><small style="color:var(--gold)">🎤 ${s.artist}</small></div>
-                <button class="req-btn" ${canRequest ? '' : 'disabled'} onclick="requestSong('${s.title}')">
-                ${currentName.length > 0 ? (myPending.length < 2 ? '點歌' : '滿額') : '請先輸入名字'}</button></div>`;
+                list.innerHTML += `
+                <div class="song-card">
+                    <div class="song-info"><b>${s.title}</b><small>🎤 ${s.artist}</small></div>
+                    <button class="req-btn" ${canRequest ? '' : 'disabled'} onclick="requestSong('${s.title}')">
+                        ${currentName ? (myPending.length < 2 ? '點歌' : '額度滿') : '請填暱稱'}
+                    </button>
+                </div>`;
             });
-            const lt = document.getElementById('limit-text');
-            lt.innerText = !currentName ? "⚠️ 請填寫稱呼" : `排隊中: ${myPending.length}/2`;
-            lt.style.color = !currentName ? "#ff4444" : "var(--gold)";
+            document.getElementById('limit-text').innerText = !currentName ? "⚠️ 請填寫稱呼" : `待唱: ${myPending.length}/2`;
         }
 
-        function requestSong(t) {
+        function requestSong(title) {
             const name = document.getElementById('viewerName').value.trim();
             const newRef = db.ref('requests').push();
-            newRef.set({ name: t, requester: name, time: new Date().toLocaleTimeString(), clientKey: newRef.key }).then(() => {
-                myPending.push(newRef.key);
-                localStorage.setItem('myPending', JSON.stringify(myPending));
-                filterAndRender(); alert('點歌成功！');
+            newRef.set({ name: title, requester: name, time: new Date().toLocaleTimeString(), clientKey: newRef.key }).then(() => {
+                myPending.push(newRef.key); localStorage.setItem('myPending', JSON.stringify(myPending));
+                filterAndRender(); alert(`點歌成功：${title}`);
             });
         }
 
-        function checkPending() {
-            db.ref('requests').on('value', snap => {
-                const data = snap.val() || {};
-                myPending = myPending.filter(id => data.hasOwnProperty(id));
-                localStorage.setItem('myPending', JSON.stringify(myPending));
-                filterAndRender();
-            });
-        }
-
-        let nextUpdate = 0;
         function refreshStats() {
-            if (Date.now() < nextUpdate) return;
             db.ref('userStats').once('value').then(snap => {
-                const body = document.getElementById('statsListDisplay'); body.innerHTML = '';
-                let users = []; snap.forEach(c => { const d = c.val(); users.push({ name: d.lastName || c.key, pts: d.stamps || 0, cis: d.totalCheckIns || 0 }); });
-                users.sort((a,b) => b.pts - a.pts).forEach(u => {
-                    body.innerHTML += `<tr><td><b>${u.name}</b></td><td>${u.pts} 🟢</td><td>${u.cis} 次</td></tr>`;
+                const body = document.getElementById('statsListDisplay');
+                body.innerHTML = '';
+                snap.forEach(c => {
+                    const d = c.val();
+                    body.innerHTML += `<tr>
+                        <td><b>${d.lastName || '隱名觀眾'}</b></td>
+                        <td class="highlight">${d.stamps || 0}</td>
+                        <td>${d.totalCheckIns || 0}</td>
+                        <td>${d.waterTickets || 0}</td> </tr>`;
                 });
-                nextUpdate = Date.now() + 1800000;
-                document.getElementById('lastUpdateTime').innerText = "最後更新：" + new Date().toLocaleTimeString();
+                document.getElementById('lastUpdateTime').innerText = "數據同步時間：" + new Date().toLocaleTimeString();
             });
         }
 
         function switchPage(pId, btn) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            document.getElementById(pId).classList.add('active'); btn.classList.add('active');
+            document.getElementById(pId).classList.add('active');
+            btn.classList.add('active');
             if(pId === 'stats-page') refreshStats();
         }
 
         window.onload = () => {
             const sn = localStorage.getItem('myNickname');
             if (sn) document.getElementById('viewerName').value = sn;
-            checkPending();
+            db.ref('requests').on('value', snap => {
+                const data = snap.val() || {};
+                myPending = myPending.filter(id => data.hasOwnProperty(id));
+                localStorage.setItem('myPending', JSON.stringify(myPending));
+                filterAndRender();
+            });
         };
     </script>
 </body>

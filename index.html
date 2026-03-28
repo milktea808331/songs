@@ -7,41 +7,31 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
-        :root { --gold: #e2b37e; --bg: #000; --panel: #161616; --border: #2a2a2a; }
+        :root { --gold: #e2b37e; --bg: #0b0b0b; --panel: #161616; --border: #2a2a2a; }
         body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg); color: #fff; margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        
         .sidebar { width: 75px; background: #0a0a0a; display: flex; flex-direction: column; align-items: center; padding-top: 40px; border-right: 1px solid var(--border); flex-shrink: 0; }
         .nav-item { margin-bottom: 35px; cursor: pointer; opacity: 0.3; transition: 0.3s; text-align: center; width: 100%; font-size: 13px; }
         .nav-item.active { opacity: 1; color: var(--gold); border-right: 3px solid var(--gold); }
-        
         .content-area { flex-grow: 1; overflow-y: auto; padding: 40px; }
-        .page { display: none; max-width: 850px; margin: auto; animation: fadeIn 0.4s ease; }
+        .page { display: none; max-width: 850px; margin: auto; animation: fadeIn 0.3s ease; }
         .page.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-        h1 { color: var(--gold); text-align: center; margin-bottom: 30px; font-size: 26px; }
-        .section-box { background: var(--panel); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 25px; }
-        .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-
-        input { 
-            width: 100%; padding: 12px; background: #080808; border: 1px solid #333; border-radius: 8px; 
-            color: #fff; font-size: 16px; box-sizing: border-box; 
-        }
-        input:focus { border-color: var(--gold); outline: none; }
-
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        h1 { color: var(--gold); text-align: center; margin-bottom: 30px; }
+        h2 { color: var(--gold); font-size: 1.2em; border-left: 4px solid var(--gold); padding-left: 10px; margin-top: 30px; }
+        .section-box { background: var(--panel); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 25px; line-height: 1.6; }
+        input { width: 100%; padding: 12px; background: #000; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 16px; box-sizing: border-box; }
         .filter-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
         .cat-btn { background: #1a1a1a; border: 1px solid #333; color: #999; padding: 6px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; }
-        .cat-btn.active { background: var(--gold); color: #000; font-weight: bold; border-color: var(--gold); }
-
+        .cat-btn.active { background: var(--gold); color: #000; font-weight: bold; }
         .song-card { background: var(--panel); padding: 18px; margin-bottom: 10px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #222; }
-        .song-info b { font-size: 18px; display: block; margin-bottom: 4px; }
+        .song-info b { font-size: 18px; display: block; color: #fff; }
         .song-info small { color: var(--gold); }
         .req-btn { background: none; border: 1.5px solid var(--gold); color: var(--gold); padding: 8px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .req-btn:disabled { border-color: #444; color: #444; cursor: not-allowed; }
-
-        .data-table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 12px; overflow: hidden; }
-        .data-table th { background: #1a1a1a; color: var(--gold); padding: 15px; text-align: left; font-size: 14px; border-bottom: 1px solid var(--border); }
-        .data-table td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 15px; }
+        .req-btn.cancel { border-color: #ff4d4d; color: #ff4d4d; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { background: #1a1a1a; color: var(--gold); padding: 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        .data-table td { padding: 15px; border-bottom: 1px solid var(--border); }
         .highlight { color: var(--gold); font-weight: bold; }
     </style>
 </head>
@@ -49,135 +39,158 @@
     <nav class="sidebar">
         <div class="nav-item active" onclick="switchPage('song-page', this)">🎵<br>歌單</div>
         <div class="nav-item" onclick="switchPage('stats-page', this)">📊<br>紀錄</div>
+        <div class="nav-item" onclick="switchPage('info-page', this)">❓<br>說明</div>
     </nav>
 
     <main class="content-area">
         <div id="song-page" class="page active">
             <h1>🎤 點歌清單</h1>
-            
             <div class="section-box">
-                <div class="label-row">
-                    <span>👤 你的稱呼：</span>
-                    <b id="limit-text" style="color:var(--gold)">請輸入名字</b>
-                </div>
-                <input type="text" id="viewerName" placeholder="輸入暱稱以解鎖點歌..." oninput="saveNick(this.value)">
+                <input type="text" id="viewerName" placeholder="輸入暱稱後即可點歌..." oninput="saveNick(this.value)">
             </div>
-
             <div class="section-box">
-                <div class="label-row"><span>🔍 搜尋歌曲：</span></div>
-                <input type="text" id="searchInput" placeholder="搜尋歌名或歌手..." oninput="filterAndRender()">
+                <input type="text" id="searchInput" placeholder="🔍 搜尋歌名或歌手..." oninput="renderSongList()">
                 <div id="categoryBtns" class="filter-group"></div>
-                <div id="typeBtns" class="filter-group"></div>
             </div>
-
-            <div id="songListDisplay">載入中...</div>
+            <div id="songListDisplay">從雲端同步歌單中...</div>
         </div>
 
         <div id="stats-page" class="page">
-            <h1>📊 觀眾數據紀錄</h1>
+            <h1>📊 忠誠點數</h1>
             <div class="section-box">
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>觀眾暱稱</th>
-                            <th>目前點數</th>
-                            <th>簽到總額</th>
+                            <th>珍珠</th>
                             <th>喝水卷</th>
+                            <th>簽到次數</th>
                         </tr>
                     </thead>
                     <tbody id="statsListDisplay"></tbody>
                 </table>
-                <p id="lastUpdateTime" style="text-align:center; color:#555; font-size:12px; margin-top:15px;">載入中...</p>
+            </div>
+        </div>
+
+        <div id="info-page" class="page">
+            <h1>📜 互動系統說明</h1>
+            <div class="section-box">
+                <h2>一、獲得珍珠</h2>
+                <ul style="color:#ccc;">
+                    <li><span class="highlight">每日簽到：</span>聊天室輸入「簽到」獲得 100 珍珠。</li>
+                    <li><span class="highlight">活躍獎勵：</span>每 5 分鐘發言獲得 10 珍珠 (記錄頁面 30 分鐘同步一次)。</li>
+                </ul>
+                <h2>二、點歌規則</h2>
+                <ul style="color:#ccc;">
+                    <li>請先在網頁輸入與直播間一致的暱稱。</li>
+                    <li>每位觀眾上限 <span class="highlight">2 首</span>。</li>
+                    <li>主播未唱前，可點擊紅色按鈕「取消點歌」來換歌。</li>
+                </ul>
+                <h2>三、珍珠兌換</h2>
+                <ul style="color:#ccc;">
+                    <li>🍵 兌換喝水 (200珍珠)：1人1次/全台5次，冷卻30分。</li>
+                    <li>🧋 兌換奶茶 (50珍珠)：奶茶喝一口奶茶。</li>
+                    <li>🎂 今天我生日 (500珍珠)：奶茶祝你生日快樂。</li>
+                    <li>🎤 生日快樂歌 (2000珍珠)：奶茶唱生日快樂歌。</li>
+                </ul>
             </div>
         </div>
     </main>
 
     <script>
-        const firebaseConfig = { apiKey: "AIzaSyC9Kn4B2Idp3o7cLsUnfQUrm5S81mHI880", authDomain: "song-c5cb3.firebaseapp.com", databaseURL: "https://song-c5cb3-default-rtdb.asia-southeast1.firebasedatabase.app/", projectId: "song-c5cb3", storageBucket: "song-c5cb3.firebasestorage.app", messagingSenderId: "475085610931", appId: "1:475085610931:web:ad39ad359294d3b4fd75c6" };
+        const firebaseConfig = { 
+            apiKey: "AIzaSyC9Kn4B2Idp3o7cLsUnfQUrm5S81mHI880", 
+            authDomain: "song-c5cb3.firebaseapp.com", 
+            databaseURL: "https://song-c5cb3-default-rtdb.asia-southeast1.firebasedatabase.app/", 
+            projectId: "song-c5cb3" 
+        };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let songs = [], curCat = '全部', curType = '全部', myPending = JSON.parse(localStorage.getItem('myPending') || '[]');
+        let allSongs = [], myPending = [], curCat = '全部';
+        const vInput = document.getElementById('viewerName');
+        vInput.value = localStorage.getItem('milktea_nick') || '';
 
-        db.ref('songList').on('value', snap => {
-            songs = []; snap.forEach(c => { songs.push(c.val()); });
-            songs.sort((a, b) => a.artist.localeCompare(b.artist, 'zh-Hant'));
-            renderFilterBtns(); filterAndRender();
+        function switchPage(p, btn) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            document.getElementById(p).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        function saveNick(v) { localStorage.setItem('milktea_nick', v); renderSongList(); }
+
+        // --- 排行榜 (30分鐘更新一次) ---
+        function updateStats() {
+            db.ref('userStats').once('value', snap => {
+                const tbody = document.getElementById('statsListDisplay');
+                tbody.innerHTML = '';
+                const users = [];
+                snap.forEach(c => { if(c.val()) users.push(c.val()); });
+                users.sort((a,b) => (b.stamps || 0) - (a.stamps || 0));
+                users.slice(0, 50).forEach(u => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${u.lastName||'匿名'}</td>
+                            <td>${u.stamps||0}</td>
+                            <td>${u.waterTickets||0}</td>
+                            <td>${u.totalCheckIns||0}</td>
+                        </tr>`;
+                });
+            });
+        }
+        updateStats(); setInterval(updateStats, 1800000); 
+
+        // --- 監聽點歌狀態 ---
+        db.ref('requests').on('value', snap => {
+            myPending = [];
+            const nick = vInput.value.trim();
+            snap.forEach(child => { if (nick && child.val().requester === nick) myPending.push(child.val().name); });
+            renderSongList();
         });
 
-        // 核心修改：第一層分類加上「其他」
-        function renderFilterBtns() {
-            const cats = ['全部', '中文', '古風', '台語', '其他'], types = ['全部', '男', '女', '樂團'];
-            document.getElementById('categoryBtns').innerHTML = cats.map(c => `<button class="cat-btn ${curCat===c?'active':''}" onclick="curCat='${c}';renderFilterBtns();filterAndRender();">${c}</button>`).join('');
-            document.getElementById('typeBtns').innerHTML = types.map(t => `<button class="cat-btn ${curType===t?'active':''}" onclick="curType='${t}';renderFilterBtns();filterAndRender();">${t}</button>`).join('');
+        // --- 監聽歌單 ---
+        db.ref('songList').on('value', snap => {
+            allSongs = [];
+            snap.forEach(c => { if(c.val()) allSongs.push(c.val()); });
+            renderFilters(); renderSongList();
+        });
+
+        function renderFilters() {
+            const cats = ['全部', ...new Set(allSongs.map(s => s.category).filter(c => c))];
+            document.getElementById('categoryBtns').innerHTML = cats.map(c => 
+                `<button class="cat-btn ${curCat===c?'active':''}" onclick="curCat='${c}';renderFilters();renderSongList();">${c}</button>`
+            ).join('');
         }
 
-        function saveNick(val) { localStorage.setItem('myNickname', val.trim()); filterAndRender(); }
-
-        function filterAndRender() {
+        function renderSongList() {
+            const nick = vInput.value.trim();
+            const search = document.getElementById('searchInput').value.toLowerCase();
             const list = document.getElementById('songListDisplay');
-            const searchKw = document.getElementById('searchInput').value.toLowerCase();
-            const currentName = (document.getElementById('viewerName').value || "").trim();
             list.innerHTML = '';
-            
-            let filtered = songs.filter(s => (curCat==='全部' || s.category===curCat) && (curType==='全部' || s.type===curType) && (s.title.toLowerCase().includes(searchKw) || s.artist.toLowerCase().includes(searchKw)));
+
+            const filtered = allSongs.filter(s => 
+                (curCat === '全部' || s.category === curCat) && 
+                (s.title.toLowerCase().includes(search) || s.artist.toLowerCase().includes(search))
+            );
 
             filtered.forEach(s => {
-                const canRequest = currentName.length > 0 && myPending.length < 2;
-                list.innerHTML += `
-                <div class="song-card">
-                    <div class="song-info"><b>${s.title}</b><small>🎤 ${s.artist}</small></div>
-                    <button class="req-btn" ${canRequest ? '' : 'disabled'} onclick="requestSong('${s.title}')">
-                        ${currentName ? (myPending.length < 2 ? '點歌' : '額度滿') : '請填暱稱'}
-                    </button>
-                </div>`;
-            });
-            document.getElementById('limit-text').innerText = !currentName ? "⚠️ 請填寫稱呼" : `待唱: ${myPending.length}/2`;
-        }
-
-        function requestSong(title) {
-            const name = document.getElementById('viewerName').value.trim();
-            const newRef = db.ref('requests').push();
-            newRef.set({ name: title, requester: name, time: new Date().toLocaleTimeString(), clientKey: newRef.key }).then(() => {
-                myPending.push(newRef.key); localStorage.setItem('myPending', JSON.stringify(myPending));
-                filterAndRender(); alert(`點歌成功：${title}`);
+                const isRequested = myPending.includes(s.title);
+                let btnHtml = isRequested ? 
+                    `<button class="req-btn cancel" onclick="cancelReq('${s.title}')">取消點歌</button>` : 
+                    `<button class="req-btn" ${(!nick || myPending.length >= 2) ? 'disabled' : ''} onclick="requestSong('${s.title}')">
+                        ${!nick ? '請填暱稱' : (myPending.length >= 2 ? '已滿' : '點歌')}
+                    </button>`;
+                list.innerHTML += `<div class="song-card"><div><b>${s.title}</b><small>${s.artist} (${s.category})</small></div>${btnHtml}</div>`;
             });
         }
 
-        function refreshStats() {
-            db.ref('userStats').once('value').then(snap => {
-                const body = document.getElementById('statsListDisplay');
-                body.innerHTML = '';
-                snap.forEach(c => {
-                    const d = c.val();
-                    body.innerHTML += `<tr>
-                        <td><b>${d.lastName || '隱名觀眾'}</b></td>
-                        <td class="highlight">${d.stamps || 0}</td>
-                        <td>${d.totalCheckIns || 0}</td>
-                        <td>${d.waterTickets || 0}</td> </tr>`;
-                });
-                document.getElementById('lastUpdateTime').innerText = "數據同步時間：" + new Date().toLocaleTimeString();
+        function requestSong(t) { db.ref('requests').push({ name: t, requester: vInput.value.trim(), time: Date.now() }); }
+        function cancelReq(t) { 
+            db.ref('requests').orderByChild('requester').equalTo(vInput.value.trim()).once('value', s => {
+                s.forEach(c => { if (c.val().name === t) c.ref.remove(); });
             });
         }
-
-        function switchPage(pId, btn) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            document.getElementById(pId).classList.add('active');
-            btn.classList.add('active');
-            if(pId === 'stats-page') refreshStats();
-        }
-
-        window.onload = () => {
-            const sn = localStorage.getItem('myNickname');
-            if (sn) document.getElementById('viewerName').value = sn;
-            db.ref('requests').on('value', snap => {
-                const data = snap.val() || {};
-                myPending = myPending.filter(id => data.hasOwnProperty(id));
-                localStorage.setItem('myPending', JSON.stringify(myPending));
-                filterAndRender();
-            });
-        };
     </script>
 </body>
 </html>

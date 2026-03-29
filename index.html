@@ -24,8 +24,9 @@
         .cat-btn { background: #1a1a1a; border: 1px solid #333; color: #999; padding: 6px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; }
         .cat-btn.active { background: var(--gold); color: #000; font-weight: bold; }
         .song-card { background: var(--panel); padding: 18px; margin-bottom: 10px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #222; }
-        .song-info b { font-size: 18px; display: block; color: #fff; }
-        .song-info small { color: var(--gold); }
+        .song-info b { font-size: 18px; display: block; color: #fff; margin-bottom: 4px; }
+        .song-info small { color: #999; }
+        .song-type-badge { font-size: 11px; border: 1px solid var(--gold); color: var(--gold); padding: 2px 6px; border-radius: 4px; margin-right: 8px; vertical-align: middle; }
         .req-btn { background: none; border: 1.5px solid var(--gold); color: var(--gold); padding: 8px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .req-btn:disabled { border-color: #444; color: #444; cursor: not-allowed; }
         .req-btn.cancel { border-color: #ff4d4d; color: #ff4d4d; }
@@ -83,7 +84,7 @@
                 <h2>二、點歌規則</h2>
                 <ul style="color:#ccc;">
                     <li>請先在網頁輸入與直播間一致的暱稱。</li>
-                    <li>每位觀眾上限 <span class="highlight">2 首</span>。</li>
+                    <li>每位觀眾上限 <span class="highlight"><span id="limitDisplay">2</span> 首</span> (依當下設定為主)。</li>
                     <li>主播未唱前，可點擊紅色按鈕「取消點歌」來換歌。</li>
                 </ul>
                 <h2>三、珍珠兌換</h2>
@@ -108,6 +109,8 @@
         const db = firebase.database();
 
         let allSongs = [], myPending = [], curCat = '全部';
+        let sysMaxSongs = 2; 
+        
         const vInput = document.getElementById('viewerName');
         vInput.value = localStorage.getItem('milktea_nick') || '';
 
@@ -120,13 +123,24 @@
 
         function saveNick(v) { localStorage.setItem('milktea_nick', v); renderSongList(); }
 
-        // --- 排行榜 (30分鐘更新一次) ---
+        // ★ 接收隱形帳號傳來的設定 ★
+        db.ref('userStats/SYSTEM_SETTINGS/maxRequests').on('value', snap => {
+            if (snap.val()) {
+                sysMaxSongs = parseInt(snap.val());
+                document.getElementById('limitDisplay').innerText = sysMaxSongs;
+                renderSongList(); 
+            }
+        });
+
+        // --- 排行榜 (過濾隱形帳號) ---
         function updateStats() {
             db.ref('userStats').once('value', snap => {
                 const tbody = document.getElementById('statsListDisplay');
                 tbody.innerHTML = '';
                 const users = [];
-                snap.forEach(c => { if(c.val()) users.push(c.val()); });
+                snap.forEach(c => { 
+                    if(c.key !== 'SYSTEM_SETTINGS' && c.val()) users.push(c.val()); 
+                });
                 users.sort((a,b) => (b.stamps || 0) - (a.stamps || 0));
                 users.slice(0, 50).forEach(u => {
                     tbody.innerHTML += `
@@ -171,17 +185,36 @@
 
             const filtered = allSongs.filter(s => 
                 (curCat === '全部' || s.category === curCat) && 
-                (s.title.toLowerCase().includes(search) || s.artist.toLowerCase().includes(search))
+                ((s.title || '').toLowerCase().includes(search) || (s.artist || '').toLowerCase().includes(search))
             );
+
+            filtered.sort((a, b) => {
+                const artistA = a.artist || '';
+                const artistB = b.artist || '';
+                if (artistA === artistB) {
+                    return (a.title || '').localeCompare((b.title || ''), 'zh-TW');
+                }
+                return artistA.localeCompare(artistB, 'zh-TW');
+            });
 
             filtered.forEach(s => {
                 const isRequested = myPending.includes(s.title);
                 let btnHtml = isRequested ? 
                     `<button class="req-btn cancel" onclick="cancelReq('${s.title}')">取消點歌</button>` : 
-                    `<button class="req-btn" ${(!nick || myPending.length >= 2) ? 'disabled' : ''} onclick="requestSong('${s.title}')">
-                        ${!nick ? '請填暱稱' : (myPending.length >= 2 ? '已滿' : '點歌')}
+                    `<button class="req-btn" ${(!nick || myPending.length >= sysMaxSongs) ? 'disabled' : ''} onclick="requestSong('${s.title}')">
+                        ${!nick ? '請填暱稱' : (myPending.length >= sysMaxSongs ? '已達上限' : '點歌')}
                     </button>`;
-                list.innerHTML += `<div class="song-card"><div><b>${s.title}</b><small>${s.artist} (${s.category})</small></div>${btnHtml}</div>`;
+                
+                let typeBadge = s.singerType ? `<span class="song-type-badge">${s.singerType}</span>` : '';
+                
+                list.innerHTML += `
+                    <div class="song-card">
+                        <div class="song-info">
+                            <b>${typeBadge}${s.title || '未知歌名'}</b>
+                            <small>${s.artist || '未知歌手'} (${s.category || '未分類'})</small>
+                        </div>
+                        ${btnHtml}
+                    </div>`;
             });
         }
 

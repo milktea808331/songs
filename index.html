@@ -25,7 +25,6 @@
         ul { list-style: none; padding: 0; margin: 0; height: 350px; overflow-y: auto; }
         li { background: #2b2d31; margin-bottom: 8px; padding: 12px; border-radius: 5px; }
         
-        /* 錢包區塊樣式 */
         .wallet-not-logged { text-align: center; padding: 40px 20px; }
         .wallet-logged { text-align: left; }
         .stat { font-size: 18px; margin: 15px 0; padding: 12px; background: #2b2d31; border-radius: 8px; font-weight: bold; }
@@ -64,8 +63,16 @@
     </div>
 
     <script>
-        // 抓取個人錢包資料 (大腦會判斷有沒有登入)
-        fetch('/api/me')
+        // ===============================================================
+        // ⚠️ 店長注意：請把下方的網址，改成你用 ngrok 或穿透工具得到的「公開網址」！
+        // 記得網址結尾「不要」加斜線 / 喔！
+        // ===============================================================
+        const API_BASE_URL = "http://127.0.0.1:11181"; 
+        // 例如改成：const API_BASE_URL = "https://your-ngrok-url.ngrok-free.app";
+        // ===============================================================
+
+        // 抓取個人錢包資料
+        fetch(`${API_BASE_URL}/api/me`, { credentials: 'include' })
             .then(r => r.json())
             .then(data => {
                 const wallet = document.getElementById("wallet-content");
@@ -77,7 +84,7 @@
                             <div class="stat">🎟️ 喝水卷：<span style="color: #e74c3c;">${data.tickets}</span> 張</div>
                             <div class="stat">📅 總簽到：<span style="color: #2ecc71;">${data.totalCheckIns}</span> 次</div>
                             <div style="margin-top: 30px; text-align: center;">
-                                <a href="/viewer_logout" class="btn btn-red">🚪 登出帳號</a>
+                                <a href="${API_BASE_URL}/viewer_logout" class="btn btn-red">🚪 登出帳號</a>
                             </div>
                         </div>
                     `;
@@ -88,14 +95,17 @@
                                 想知道自己累積了多少珍珠嗎？<br>
                                 趕快登入查看你的專屬資產吧！
                             </p>
-                            <a href="/login_page" class="btn btn-blue">🔑 點我登入 / 開通帳號</a>
+                            <a href="${API_BASE_URL}/login_page" class="btn btn-blue">🔑 點我登入 / 開通帳號</a>
                         </div>
                     `;
                 }
+            })
+            .catch(err => {
+                document.getElementById("wallet-content").innerHTML = `<p style="color:#ff6b6b; text-align:center;">❌ 無法連線到奶茶大腦，請確認大腦是否已開機！</p>`;
             });
 
         // 抓取歌單資料
-        fetch('/get_songs')
+        fetch(`${API_BASE_URL}/get_songs`)
             .then(r => r.json())
             .then(data => {
                 const list = document.getElementById("songList");

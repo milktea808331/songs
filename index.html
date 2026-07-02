@@ -2,122 +2,73 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>奶茶茶舖 - 資訊大廳</title>
+    <title>奶茶茶舖 - 雲端大廳</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
-        body { 
-            background: #2b2d31; color: #fff; font-family: '微軟正黑體', sans-serif; 
-            margin: 0; padding: 20px; 
-        }
-        .header {
-            display: flex; justify-content: space-between; align-items: center; 
-            border-bottom: 2px solid #5865F2; padding-bottom: 10px; margin-bottom: 20px;
-        }
-        .header h1 { margin: 0; color: #5865F2; }
-        .container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; }
-        .box { 
-            background: #1e1f22; padding: 20px; border-radius: 10px; flex: 1; min-width: 300px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid #444;
-        }
-        h2 { margin-top: 0; border-bottom: 1px dashed #444; padding-bottom: 10px; }
-        .wallet-title { color: #f1c40f; }
-        .song-title { color: #d63384; }
-        
-        ul { list-style: none; padding: 0; margin: 0; height: 350px; overflow-y: auto; }
-        li { background: #2b2d31; margin-bottom: 8px; padding: 12px; border-radius: 5px; }
-        
-        .wallet-not-logged { text-align: center; padding: 40px 20px; }
-        .wallet-logged { text-align: left; }
-        .stat { font-size: 18px; margin: 15px 0; padding: 12px; background: #2b2d31; border-radius: 8px; font-weight: bold; }
-        
-        .btn { 
-            display: inline-block; padding: 12px 25px; border-radius: 5px; font-weight: bold; 
-            text-decoration: none; transition: 0.2s; color: white; border: none; cursor: pointer; 
-        }
-        .btn-blue { background: #5865F2; }
-        .btn-blue:hover { background: #4752c4; }
-        .btn-red { background: #ed4245; }
-        .btn-red:hover { background: #c93639; }
+        body { background: #2b2d31; color: #fff; font-family: '微軟正黑體', sans-serif; margin: 0; padding: 20px; }
+        .container { display: flex; gap: 20px; max-width: 900px; margin: 0 auto; }
+        .box { background: #1e1f22; padding: 20px; border-radius: 10px; flex: 1; border: 1px solid #444; }
+        .stat { font-size: 18px; margin: 10px 0; padding: 10px; background: #2b2d31; border-radius: 5px; }
+        input { padding: 8px; width: 70%; background: #2b2d31; border: 1px solid #444; color: white; border-radius: 4px; }
+        button { padding: 8px 15px; background: #5865F2; border: none; color: white; cursor: pointer; border-radius: 4px; }
     </style>
 </head>
 <body>
-    <div style="max-width: 1200px; margin: 0 auto;">
-        <div class="header">
-            <h1>🍵 奶茶茶舖資訊大廳</h1>
+    <div class="container">
+        <div class="box">
+            <h2>💰 我的錢包</h2>
+            <div id="wallet">正在連線至雲端...</div>
         </div>
-
-        <div class="container">
-            <div class="box">
-                <h2 class="wallet-title">💰 我的專屬錢包</h2>
-                <div id="wallet-content">
-                    <p style="color: #aaa; text-align: center;">正在確認身分中...</p>
-                </div>
-            </div>
-
-            <div class="box">
-                <h2 class="song-title">🎤 奶茶專屬曲目庫</h2>
-                <ul id="songList">
-                    <li style="color: #aaa;">努力載入中...</li>
-                </ul>
-            </div>
+        <div class="box">
+            <h2>🎤 點歌區</h2>
+            <input type="text" id="songInput" placeholder="輸入歌名...">
+            <button onclick="addSong()">點歌</button>
+            <ul id="songList"></ul>
         </div>
     </div>
 
     <script>
-        // ===============================================================
-        // ⚠️ 店長注意：請把下方的網址，改成你用 ngrok 或穿透工具得到的「公開網址」！
-        // 記得網址結尾「不要」加斜線 / 喔！
-        // ===============================================================
-        const API_BASE_URL = "http://127.0.0.1:11181"; 
-        // 例如改成：const API_BASE_URL = "https://your-ngrok-url.ngrok-free.app";
-        // ===============================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9Kn4B2Idp3o7cLsUnfqUrm5S81mHI880",
+            databaseURL: "https://song-c5cb3-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        // 抓取個人錢包資料
-        fetch(`${API_BASE_URL}/api/me`, { credentials: 'include' })
-            .then(r => r.json())
-            .then(data => {
-                const wallet = document.getElementById("wallet-content");
-                if(data.logged_in) {
-                    wallet.innerHTML = `
-                        <div class="wallet-logged">
-                            <p style="font-size: 16px; color: #ccc;">歡迎回來，<b style="color: #fff; font-size: 24px;">${data.name}</b>！</p>
-                            <div class="stat">🪙 珍珠數量：<span style="color: #f1c40f;">${data.stamps}</span> 顆</div>
-                            <div class="stat">🎟️ 喝水卷：<span style="color: #e74c3c;">${data.tickets}</span> 張</div>
-                            <div class="stat">📅 總簽到：<span style="color: #2ecc71;">${data.totalCheckIns}</span> 次</div>
-                            <div style="margin-top: 30px; text-align: center;">
-                                <a href="${API_BASE_URL}/viewer_logout" class="btn btn-red">🚪 登出帳號</a>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    wallet.innerHTML = `
-                        <div class="wallet-not-logged">
-                            <p style="color: #aaa; font-size: 16px; margin-bottom: 25px; line-height: 1.6;">
-                                想知道自己累積了多少珍珠嗎？<br>
-                                趕快登入查看你的專屬資產吧！
-                            </p>
-                            <a href="${API_BASE_URL}/login_page" class="btn btn-blue">🔑 點我登入 / 開通帳號</a>
-                        </div>
-                    `;
-                }
-            })
-            .catch(err => {
-                document.getElementById("wallet-content").innerHTML = `<p style="color:#ff6b6b; text-align:center;">❌ 無法連線到奶茶大腦，請確認大腦是否已開機！</p>`;
+        // 1. 自動匿名登入，確保能觸發 Firebase 安全規則
+        firebase.auth().signInAnonymously().then(() => {
+            const uid = firebase.auth().currentUser.uid;
+            
+            // 2. 顯示個人錢包 (對接 userStats)
+            db.ref('userStats/' + uid).on('value', (snapshot) => {
+                const data = snapshot.val() || {stamps: 0, waterTickets: 0};
+                document.getElementById('wallet').innerHTML = `
+                    <div class="stat">珍珠: ${data.stamps || 0}</div>
+                    <div class="stat">喝水卷: ${data.waterTickets || 0}</div>
+                `;
             });
+        });
 
-        // 抓取歌單資料
-        fetch(`${API_BASE_URL}/get_songs`)
-            .then(r => r.json())
-            .then(data => {
-                const list = document.getElementById("songList");
-                list.innerHTML = "";
-                if(data.songs && data.songs.length > 0) {
-                    data.songs.forEach(song => {
-                        list.innerHTML += `<li>🎵 ${song}</li>`;
-                    });
-                } else {
-                    list.innerHTML = "<li style='color:#aaa;'>目前還沒有歌曲喔！</li>";
-                }
+        // 3. 點歌功能 (對接 songList)
+        function addSong() {
+            const val = document.getElementById('songInput').value;
+            if(val) {
+                db.ref('songList').push(val);
+                document.getElementById('songInput').value = '';
+                alert("點歌成功！");
+            }
+        }
+
+        // 4. 即時顯示歌單
+        db.ref('songList').on('value', (snapshot) => {
+            const list = document.getElementById('songList');
+            list.innerHTML = '';
+            snapshot.forEach(child => {
+                list.innerHTML += `<li>${child.val()}</li>`;
             });
+        });
     </script>
 </body>
 </html>

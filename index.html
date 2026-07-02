@@ -2,80 +2,115 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>奶茶茶舖 - 雲端大廳</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <title>奶茶的互動空間</title>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
-        body { background: #2b2d31; color: #fff; font-family: '微軟正黑體', sans-serif; margin: 0; padding: 20px; }
-        .container { display: flex; gap: 20px; max-width: 900px; margin: 0 auto; }
-        .box { background: #1e1f22; padding: 20px; border-radius: 10px; flex: 1; border: 1px solid #444; }
-        .stat { font-size: 18px; margin: 10px 0; padding: 10px; background: #2b2d31; border-radius: 5px; }
-        input { padding: 8px; width: 65%; background: #2b2d31; border: 1px solid #444; color: white; border-radius: 4px; }
-        button { padding: 8px 15px; background: #5865F2; border: none; color: white; cursor: pointer; border-radius: 4px; }
-        ul { list-style: none; padding: 0; }
-        li { padding: 5px 0; border-bottom: 1px solid #333; }
+        :root { --gold: #e2b37e; --bg: #0b0b0b; --panel: #161616; --border: #2a2a2a; }
+        body { background: var(--bg); color: #fff; font-family: "Microsoft JhengHei"; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        /* 彈窗與介面 */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .box { background: var(--panel); padding: 40px; border-radius: 20px; border: 1px solid var(--gold); text-align: center; width: 320px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: white; box-sizing: border-box; border-radius: 8px; }
+        .btn { padding: 10px 20px; background: var(--gold); border: none; cursor: pointer; color: #000; font-weight: bold; border-radius: 5px; margin: 5px; width: 100%; }
+        .btn-sec { background: #444; color: white; }
+        /* 頁面 */
+        .sidebar { width: 75px; background: #0a0a0a; display: flex; flex-direction: column; align-items: center; padding-top: 40px; border-right: 1px solid var(--border); }
+        .nav-item { margin-bottom: 35px; cursor: pointer; opacity: 0.3; transition: 0.3s; text-align: center; font-size: 13px; }
+        .nav-item.active { opacity: 1; color: var(--gold); border-right: 3px solid var(--gold); }
+        .content-area { flex-grow: 1; overflow-y: auto; padding: 40px; display: none; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="box">
-            <h2>💰 我的錢包</h2>
-            <div id="wallet">正在連線至雲端...</div>
-        </div>
-        <div class="box">
-            <h2>🎤 點歌區</h2>
-            <input type="text" id="songInput" placeholder="輸入歌名...">
-            <button onclick="addSong()">點歌</button>
-            <ul id="songList"></ul>
+
+    <div id="authModal" class="modal">
+        <div class="box" id="modalContent">
+            <h2>歡迎來到奶茶茶舖</h2>
+            <button class="btn" onclick="showRegister()">首次登入 (綁定)</button>
+            <button class="btn" onclick="showLogin()">已有帳密登入</button>
         </div>
     </div>
 
+    <main id="mainApp" class="content-area" style="display:flex;">
+        <nav class="sidebar">
+            <div class="nav-item active" onclick="alert('資產頁面')">📊<br>資產</div>
+            <div class="nav-item" onclick="alert('歌單頁面')">🎵<br>歌單</div>
+        </nav>
+        <div style="padding:40px;"><h1>歡迎回來，<span id="userNick"></span></h1></div>
+    </main>
+
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyC9Kn4B2Idp3o7cLsUnfqUrm5S81mHI880",
-            databaseURL: "https://song-c5cb3-default-rtdb.asia-southeast1.firebasedatabase.app"
-        };
-        firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-
-        // 1. 匿名登入 (觸發安全規則)
-        firebase.auth().signInAnonymously().then(() => {
-            const uid = firebase.auth().currentUser.uid;
-            // 讀取錢包資料 (目前設定為讀取當前匿名帳號對應的欄位)
-            db.ref('userStats/' + uid).on('value', (snapshot) => {
-                const data = snapshot.val() || {stamps: 0, waterTickets: 0};
-                document.getElementById('wallet').innerHTML = `
-                    <div class="stat">珍珠: ${data.stamps || 0}</div>
-                    <div class="stat">喝水卷: ${data.waterTickets || 0}</div>
-                `;
-            });
+        firebase.initializeApp({
+            apiKey: "AIzaSyC9Kn4B2Idp3o7cLsUnfQUrm5S81mHI880", 
+            databaseURL: "https://song-c5cb3-default-rtdb.asia-southeast1.firebasedatabase.app/" 
         });
 
-        // 2. 歌單顯示邏輯 (已修正 title 欄位讀取)
-        db.ref('songList').on('value', (snapshot) => {
-            const list = document.getElementById('songList');
-            list.innerHTML = '';
-            snapshot.forEach(child => {
-                let data = child.val();
-                let songName = (typeof data === 'object' && data !== null) ? (data.title || "無標題") : data;
-                let li = document.createElement('li');
-                li.textContent = "🎵 " + songName;
-                list.appendChild(li);
-            });
-        });
-
-        // 3. 點歌功能
-        function addSong() {
-            const input = document.getElementById('songInput');
-            if(input.value.trim()) {
-                db.ref('songList').push({
-                    title: input.value.trim(),
-                    timestamp: Date.now()
-                });
-                input.value = '';
-                alert("點歌成功！");
+        // 頁面載入檢查登入
+        window.onload = () => {
+            const acc = localStorage.getItem('userAccount');
+            if(acc) {
+                document.getElementById('authModal').style.display = 'none';
+                document.getElementById('userNick').innerText = acc;
             }
+        };
+
+        function resetModal() {
+            document.getElementById('modalContent').innerHTML = `
+                <h2>歡迎來到奶茶茶舖</h2>
+                <button class="btn" onclick="showRegister()">首次登入 (綁定)</button>
+                <button class="btn" onclick="showLogin()">已有帳密登入</button>
+            `;
+        }
+
+        function showRegister() {
+            const code = Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('modalContent').innerHTML = `
+                <h2>身份驗證</h2>
+                <p>請在聊天室輸入：</p>
+                <h1 style="color:var(--gold)">!綁定 ${code}</h1>
+                <div id="regForm" style="display:none;">
+                    <input type="text" id="newAcc" placeholder="設定帳號">
+                    <input type="password" id="newPwd" placeholder="設定密碼">
+                    <button class="btn" onclick="registerUser('${code}')">完成註冊</button>
+                </div>
+                <button class="btn btn-sec" onclick="resetModal()">返回</button>
+            `;
+            db.ref('authCodes/' + code).on('value', snap => {
+                if(snap.exists()) document.getElementById('regForm').style.display = 'block';
+            });
+        }
+
+        function registerUser(code) {
+            const acc = document.getElementById('newAcc').value;
+            const pwd = document.getElementById('newPwd').value;
+            db.ref('users/' + acc).set({ pwd: pwd, code: code });
+            alert("註冊成功！");
+            location.reload();
+        }
+
+        function showLogin() {
+            document.getElementById('modalContent').innerHTML = `
+                <h2>帳密登入</h2>
+                <input type="text" id="loginAcc" placeholder="帳號">
+                <input type="password" id="loginPwd" placeholder="密碼">
+                <div id="loginMsg" style="color:#ff4d4d; font-size:14px; margin:10px 0;"></div>
+                <button class="btn" onclick="login()">登入</button>
+                <button class="btn btn-sec" onclick="resetModal()">返回</button>
+            `;
+        }
+
+        function login() {
+            const acc = document.getElementById('loginAcc').value;
+            const pwd = document.getElementById('loginPwd').value;
+            db.ref('users/' + acc).once('value', snap => {
+                if(snap.exists() && snap.val().pwd === pwd) {
+                    localStorage.setItem('userAccount', acc);
+                    location.reload();
+                } else {
+                    document.getElementById('loginMsg').innerText = "查無此帳號，請確認帳密或進行首次綁定";
+                }
+            });
         }
     </script>
 </body>

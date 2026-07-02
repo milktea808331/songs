@@ -81,37 +81,71 @@
             });
         }
 
-        function registerUser(code) {
-            const acc = document.getElementById('newAcc').value;
-            const pwd = document.getElementById('newPwd').value;
-            db.ref('users/' + acc).set({ pwd: pwd, code: code });
-            alert("註冊成功！");
-            location.reload();
-        }
+// --- 註冊與綁定邏輯 (註冊時檢查驗證碼) ---
+function registerUser(code) {
+    const acc = document.getElementById('newAcc').value;
+    const pwd = document.getElementById('newPwd').value;
+    
+    if (!acc || !pwd) {
+        alert("請輸入完整的帳號與密碼");
+        return;
+    }
 
-        function showLogin() {
-            document.getElementById('modalContent').innerHTML = `
-                <h2>帳密登入</h2>
-                <input type="text" id="loginAcc" placeholder="帳號">
-                <input type="password" id="loginPwd" placeholder="密碼">
-                <div id="loginMsg" style="color:#ff4d4d; font-size:14px; margin:10px 0;"></div>
-                <button class="btn" onclick="login()">登入</button>
-                <button class="btn btn-sec" onclick="resetModal()">返回</button>
-            `;
+    db.ref('authCodes/' + code).once('value', snap => {
+        // 若驗證碼不存在
+        if (!snap.exists()) {
+            alert("驗證碼無效或已過期，請確認是否輸入正確，或進行首次綁定流程。");
+            return;
         }
-
-        function login() {
-            const acc = document.getElementById('loginAcc').value;
-            const pwd = document.getElementById('loginPwd').value;
-            db.ref('users/' + acc).once('value', snap => {
-                if(snap.exists() && snap.val().pwd === pwd) {
-                    localStorage.setItem('userAccount', acc);
+        
+        const uid = snap.val().uid;
+        
+        // 檢查該帳號是否已被註冊 (避免重複帳號)
+        db.ref('userStats').orderByChild('account').equalTo(acc).once('value', checkSnap => {
+            if (checkSnap.exists()) {
+                alert("此帳號已被使用，請更換一個帳號名稱。");
+            } else {
+                // 執行綁定與儲存
+                db.ref('userStats/' + uid).update({
+                    account: acc,
+                    password: pwd
+                }).then(() => {
+                    db.ref('authCodes/' + code).remove();
+                    alert("綁定成功！現在可以使用此帳密登入。");
                     location.reload();
-                } else {
-                    document.getElementById('loginMsg').innerText = "查無此帳號，請確認帳密或進行首次綁定";
-                }
-            });
+                });
+            }
+        });
+    });
+}
+
+// --- 登入邏輯 (包含錯誤回饋) ---
+function login() {
+    const acc = document.getElementById('loginAcc').value;
+    const pwd = document.getElementById('loginPwd').value;
+    const msg = document.getElementById('loginMsg');
+    
+    if(!acc || !pwd) {
+        msg.innerText = "請輸入帳號與密碼";
+        return;
+    }
+
+    db.ref('userStats').orderByChild('account').equalTo(acc).once('value', snap => {
+        let found = false;
+        snap.forEach(c => {
+            if(c.val().password === pwd) {
+                localStorage.setItem('userAccount', acc);
+                localStorage.setItem('userUid', c.key);
+                found = true;
+                location.reload();
+            }
+        });
+        
+        if(!found) {
+            msg.innerText = "查無此帳號，請確認帳號密碼是否正確，或進行首次綁定";
         }
+    });
+}
     </script>
 </body>
 </html>

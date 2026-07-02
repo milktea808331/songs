@@ -29,46 +29,57 @@
         </div>
     </div>
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyC9Kn4B2Idp3o7cLsUnfqUrm5S81mHI880",
-            databaseURL: "https://song-c5cb3-default-rtdb.asia-southeast1.firebasedatabase.app"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+   <script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyC9Kn4B2Idp3o7cLsUnfqUrm5S81mHI880",
+        databaseURL: "https://song-c5cb3-default-rtdb.asia-southeast1.firebasedatabase.app"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-        // 1. 自動匿名登入，確保能觸發 Firebase 安全規則
-        firebase.auth().signInAnonymously().then(() => {
-            const uid = firebase.auth().currentUser.uid;
-            
-            // 2. 顯示個人錢包 (對接 userStats)
-            db.ref('userStats/' + uid).on('value', (snapshot) => {
-                const data = snapshot.val() || {stamps: 0, waterTickets: 0};
-                document.getElementById('wallet').innerHTML = `
-                    <div class="stat">珍珠: ${data.stamps || 0}</div>
-                    <div class="stat">喝水卷: ${data.waterTickets || 0}</div>
-                `;
-            });
-        });
-
-        // 3. 點歌功能 (對接 songList)
-        function addSong() {
-            const val = document.getElementById('songInput').value;
-            if(val) {
-                db.ref('songList').push(val);
-                document.getElementById('songInput').value = '';
-                alert("點歌成功！");
+    // 匿名登入後，開始抓取資料
+    firebase.auth().signInAnonymously().then(() => {
+        // 為了確認連線是否正常，我們先抓取整份排行榜列表
+        db.ref('userStats').on('value', (snapshot) => {
+            const allUsers = snapshot.val();
+            if (!allUsers) {
+                document.getElementById('wallet').innerHTML = "目前沒有資料庫資料";
+                return;
             }
-        }
-
-        // 4. 即時顯示歌單
-        db.ref('songList').on('value', (snapshot) => {
-            const list = document.getElementById('songList');
-            list.innerHTML = '';
-            snapshot.forEach(child => {
-                list.innerHTML += `<li>${child.val()}</li>`;
-            });
+            
+            // 這裡顯示第一筆資料作為測試，看看有沒有正確抓到
+            // 你之後可以透過「代碼綁定」來讓這裡只顯示「該觀眾」的資料
+            const firstUid = Object.keys(allUsers)[0];
+            const data = allUsers[firstUid];
+            
+            document.getElementById('wallet').innerHTML = `
+                <div class="stat">珍珠: ${data.stamps || 0}</div>
+                <div class="stat">喝水卷: ${data.waterTickets || 0}</div>
+            `;
         });
-    </script>
+    });
+
+    // 點歌功能
+    function addSong() {
+        const val = document.getElementById('songInput').value;
+        if(val) {
+            db.ref('songList').push(val);
+            document.getElementById('songInput').value = '';
+            alert("點歌成功！");
+        }
+    }
+
+    // 歌單顯示：加入 typeof 檢查，確保顯示的是文字而不是 [object Object]
+    db.ref('songList').on('value', (snapshot) => {
+        const list = document.getElementById('songList');
+        list.innerHTML = '';
+        snapshot.forEach(child => {
+            let songText = child.val();
+            // 如果讀到的是物件(例如 {name: "歌名"})，就抓取 name 欄位；否則直接顯示文字
+            let displayVal = (typeof songText === 'object' && songText !== null) ? (songText.name || "未知歌曲") : songText;
+            list.innerHTML += `<li>🎵 ${displayVal}</li>`;
+        });
+    });
+</script>
 </body>
 </html>

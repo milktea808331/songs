@@ -70,22 +70,29 @@
         }
 
         function showRegister() {
-            const code = Math.floor(1000 + Math.random() * 9000);
-            document.getElementById('modalContent').innerHTML = `
-                <h2>身份驗證</h2>
-                <p>請在聊天室輸入：</p>
-                <h1 style="color:var(--gold)">!綁定 ${code}</h1>
-                <div id="regForm" style="display:none;">
-                    <input type="text" id="newAcc" placeholder="設定帳號">
-                    <input type="password" id="newPwd" placeholder="設定密碼">
-                    <button class="btn" onclick="registerUser('${code}')">完成註冊</button>
-                </div>
-                <button class="btn btn-sec" onclick="resetModal()">返回</button>
-            `;
-            db.ref('authCodes/' + code).on('value', snap => {
-                if(snap.exists()) document.getElementById('regForm').style.display = 'block';
-            });
+    const code = Math.floor(1000 + Math.random() * 9000);
+    document.getElementById('modalContent').innerHTML = `
+        <h2>身份驗證</h2>
+        <p>請在聊天室輸入：</p>
+        <h1 style="color:var(--gold)">!綁定 ${code}</h1>
+        <div id="regForm" style="display:none;">
+            <input type="text" id="newAcc" placeholder="設定帳號">
+            <input type="password" id="newPwd" placeholder="設定密碼">
+            <button class="btn" onclick="registerUser('${code}')">完成註冊</button>
+        </div>
+        <button class="btn btn-sec" onclick="resetModal()">返回</button>
+    `;
+
+    // 改為監聽整體的 authCodes，或由機器人直接寫入該用戶的 authCode 欄位
+    // 這裡我們假設機器人會去更新 authCodes/code = uid
+    const listener = db.ref('authCodes/' + code).on('value', snap => {
+        if(snap.exists()) {
+            document.getElementById('regForm').style.display = 'block';
+            // 綁定成功後，移除監聽器避免重複觸發
+            db.ref('authCodes/' + code).off('value', listener);
         }
+    });
+}
 
 // --- 註冊與綁定邏輯 (註冊時檢查驗證碼) ---
 function registerUser(code) {

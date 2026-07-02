@@ -38,6 +38,7 @@
     </main>
 
     <script>
+        // 1. 初始化 Firebase
         if (!firebase.apps.length) {
             firebase.initializeApp({
                 apiKey: "AIzaSyC9Kn4B2Idp3o7cLsUnfQUrm5S81mHI880", 
@@ -46,6 +47,7 @@
         }
         const db = firebase.database();
 
+        // 2. 頁面載入檢查
         window.onload = () => {
             const acc = localStorage.getItem('userAccount');
             if(acc) {
@@ -55,6 +57,7 @@
             }
         };
 
+        // 3. UI 切換函式
         function resetModal() {
             document.getElementById('modalContent').innerHTML = `
                 <h2>歡迎來到奶茶茶舖</h2>
@@ -63,7 +66,6 @@
             `;
         }
 
-        // --- 登入介面 ---
         function showLogin() {
             document.getElementById('modalContent').innerHTML = `
                 <h2>帳密登入</h2>
@@ -71,7 +73,7 @@
                 <input type="password" id="loginPwd" placeholder="輸入密碼">
                 <button class="btn" onclick="login()">登入</button>
                 <button class="btn btn-sec" onclick="resetModal()">返回</button>
-                <p id="loginMsg" style="color:red; font-size:12px;"></p>
+                <p id="loginMsg" style="color:red; font-size:12px; margin-top:10px;"></p>
             `;
         }
 
@@ -96,6 +98,7 @@
             });
         }
 
+        // 4. 核心邏輯
         function registerUser(code) {
             const acc = document.getElementById('newAcc').value;
             const pwd = document.getElementById('newPwd').value;
@@ -105,6 +108,7 @@
                 const uid = snap.val().uid;
                 db.ref('userStats/' + uid).update({ account: acc, password: pwd }).then(() => {
                     db.ref('authCodes/' + code).remove();
+                    localStorage.setItem('userAccount', acc);
                     alert("綁定成功！");
                     location.reload();
                 });
@@ -120,7 +124,6 @@
                 snap.forEach(c => {
                     if(c.val().password === pwd) {
                         localStorage.setItem('userAccount', acc);
-                        localStorage.setItem('userUid', c.key);
                         found = true;
                         location.reload();
                     }

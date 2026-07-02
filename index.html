@@ -40,20 +40,26 @@
     </main>
 
     <script>
-        const db = firebase.database();
+        // 1. 先初始化 Firebase
+    if (!firebase.apps.length) {
         firebase.initializeApp({
             apiKey: "AIzaSyC9Kn4B2Idp3o7cLsUnfQUrm5S81mHI880", 
             databaseURL: "https://song-c5cb3-default-rtdb.asia-southeast1.firebasedatabase.app/" 
         });
+    }
 
-        // 頁面載入檢查登入
-        window.onload = () => {
-            const acc = localStorage.getItem('userAccount');
-            if(acc) {
-                document.getElementById('authModal').style.display = 'none';
-                document.getElementById('userNick').innerText = acc;
-            }
-        };
+    // 2. 初始化後，才指定 db
+    const db = firebase.database();
+
+    // 3. 接下來才是你的視窗檢查邏輯
+    window.onload = () => {
+        const acc = localStorage.getItem('userAccount');
+        if(acc) {
+            document.getElementById('authModal').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'flex'; // 確保主介面顯示
+            document.getElementById('userNick').innerText = acc;
+        }
+    };
 
         function resetModal() {
             document.getElementById('modalContent').innerHTML = `

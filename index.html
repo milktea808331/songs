@@ -99,29 +99,26 @@ function registerUser(code) {
     const acc = document.getElementById('newAcc').value;
     const pwd = document.getElementById('newPwd').value;
     
-    if (!acc || !pwd) { alert("請輸入完整的帳號與密碼"); return; }
+    if (!acc || !pwd) { alert("請輸入帳號與密碼"); return; }
 
     db.ref('authCodes/' + code).once('value', snap => {
         if (!snap.exists()) { alert("驗證碼無效"); return; }
         const uid = snap.val().uid;
 
-        db.ref('userStats').orderByChild('account').equalTo(acc).once('value', checkSnap => {
-            if (checkSnap.exists()) {
-                alert("此帳號已被使用");
-            } else {
-                // 直接寫入 Firebase，因為規則已經放行了
-                db.ref('userStats/' + uid).update({
-                    account: acc,
-                    password: pwd
-                }).then(() => {
-                    db.ref('authCodes/' + code).remove();
-                    alert("綁定成功！");
-                    location.reload();
-                });
-            }
+        // 直接寫入 Firebase (現在規則改好後，這裡就不會再跳出權限錯誤了)
+        db.ref('userStats/' + uid).update({
+            account: acc,
+            password: pwd
+        }).then(() => {
+            db.ref('authCodes/' + code).remove();
+            alert("綁定成功！");
+            location.reload();
+        }).catch(err => {
+            alert("寫入失敗，請確認 Firebase 規則設定：" + err.message);
         });
     });
 }
+
 // --- 登入邏輯 (包含錯誤回饋) ---
 function login() {
     const acc = document.getElementById('loginAcc').value;

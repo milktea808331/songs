@@ -8,13 +8,11 @@
     <style>
         :root { --gold: #e2b37e; --bg: #0b0b0b; --panel: #161616; --border: #2a2a2a; }
         body { background: var(--bg); color: #fff; font-family: "Microsoft JhengHei"; margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        /* 彈窗與介面 */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; z-index: 1000; }
         .box { background: var(--panel); padding: 40px; border-radius: 20px; border: 1px solid var(--gold); text-align: center; width: 320px; }
         input { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: white; box-sizing: border-box; border-radius: 8px; }
         .btn { padding: 10px 20px; background: var(--gold); border: none; cursor: pointer; color: #000; font-weight: bold; border-radius: 5px; margin: 5px; width: 100%; }
         .btn-sec { background: #444; color: white; }
-        /* 頁面 */
         .sidebar { width: 75px; background: #0a0a0a; display: flex; flex-direction: column; align-items: center; padding-top: 40px; border-right: 1px solid var(--border); }
         .nav-item { margin-bottom: 35px; cursor: pointer; opacity: 0.3; transition: 0.3s; text-align: center; font-size: 13px; }
         .nav-item.active { opacity: 1; color: var(--gold); border-right: 3px solid var(--gold); }
@@ -31,35 +29,31 @@
         </div>
     </div>
 
-    <main id="mainApp" class="content-area" style="display:flex;">
+    <main id="mainApp" class="content-area">
         <nav class="sidebar">
-            <div class="nav-item active" onclick="alert('資產頁面')">📊<br>資產</div>
-            <div class="nav-item" onclick="alert('歌單頁面')">🎵<br>歌單</div>
+            <div class="nav-item active">📊<br>資產</div>
+            <div class="nav-item">🎵<br>歌單</div>
         </nav>
         <div style="padding:40px;"><h1>歡迎回來，<span id="userNick"></span></h1></div>
     </main>
 
     <script>
-        // 1. 先初始化 Firebase
-    if (!firebase.apps.length) {
-        firebase.initializeApp({
-            apiKey: "AIzaSyC9Kn4B2Idp3o7cLsUnfQUrm5S81mHI880", 
-            databaseURL: "https://song-c5cb3-default-rtdb.asia-southeast1.firebasedatabase.app/" 
-        });
-    }
-
-    // 2. 初始化後，才指定 db
-    const db = firebase.database();
-
-    // 3. 接下來才是你的視窗檢查邏輯
-    window.onload = () => {
-        const acc = localStorage.getItem('userAccount');
-        if(acc) {
-            document.getElementById('authModal').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'flex'; // 確保主介面顯示
-            document.getElementById('userNick').innerText = acc;
+        if (!firebase.apps.length) {
+            firebase.initializeApp({
+                apiKey: "AIzaSyC9Kn4B2Idp3o7cLsUnfQUrm5S81mHI880", 
+                databaseURL: "https://song-c5cb3-default-rtdb.asia-southeast1.firebasedatabase.app/" 
+            });
         }
-    };
+        const db = firebase.database();
+
+        window.onload = () => {
+            const acc = localStorage.getItem('userAccount');
+            if(acc) {
+                document.getElementById('authModal').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'flex';
+                document.getElementById('userNick').innerText = acc;
+            }
+        };
 
         function resetModal() {
             document.getElementById('modalContent').innerHTML = `
@@ -69,83 +63,71 @@
             `;
         }
 
+        // --- 登入介面 ---
+        function showLogin() {
+            document.getElementById('modalContent').innerHTML = `
+                <h2>帳密登入</h2>
+                <input type="text" id="loginAcc" placeholder="輸入帳號">
+                <input type="password" id="loginPwd" placeholder="輸入密碼">
+                <button class="btn" onclick="login()">登入</button>
+                <button class="btn btn-sec" onclick="resetModal()">返回</button>
+                <p id="loginMsg" style="color:red; font-size:12px;"></p>
+            `;
+        }
+
         function showRegister() {
-    const code = Math.floor(1000 + Math.random() * 9000);
-    document.getElementById('modalContent').innerHTML = `
-        <h2>身份驗證</h2>
-        <p>請在聊天室輸入：</p>
-        <h1 style="color:var(--gold)">!綁定 ${code}</h1>
-        <div id="regForm" style="display:none;">
-            <input type="text" id="newAcc" placeholder="設定帳號">
-            <input type="password" id="newPwd" placeholder="設定密碼">
-            <button class="btn" onclick="registerUser('${code}')">完成註冊</button>
-        </div>
-        <button class="btn btn-sec" onclick="resetModal()">返回</button>
-    `;
-
-    // 改為監聽整體的 authCodes，或由機器人直接寫入該用戶的 authCode 欄位
-    // 這裡我們假設機器人會去更新 authCodes/code = uid
-    const listener = db.ref('authCodes/' + code).on('value', snap => {
-        if(snap.exists()) {
-            document.getElementById('regForm').style.display = 'block';
-            // 綁定成功後，移除監聽器避免重複觸發
-            db.ref('authCodes/' + code).off('value', listener);
+            const code = Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('modalContent').innerHTML = `
+                <h2>身份驗證</h2>
+                <p>請在聊天室輸入：</p>
+                <h1 style="color:var(--gold)">!綁定 ${code}</h1>
+                <div id="regForm" style="display:none;">
+                    <input type="text" id="newAcc" placeholder="設定帳號">
+                    <input type="password" id="newPwd" placeholder="設定密碼">
+                    <button class="btn" onclick="registerUser('${code}')">完成註冊</button>
+                </div>
+                <button class="btn btn-sec" onclick="resetModal()">返回</button>
+            `;
+            const listener = db.ref('authCodes/' + code).on('value', snap => {
+                if(snap.exists()) {
+                    document.getElementById('regForm').style.display = 'block';
+                    db.ref('authCodes/' + code).off('value', listener);
+                }
+            });
         }
-    });
-}
 
-// --- 註冊與綁定邏輯 (註冊時檢查驗證碼) ---
-function registerUser(code) {
-    const acc = document.getElementById('newAcc').value;
-    const pwd = document.getElementById('newPwd').value;
-    
-    if (!acc || !pwd) { alert("請輸入帳號與密碼"); return; }
-
-    db.ref('authCodes/' + code).once('value', snap => {
-        if (!snap.exists()) { alert("驗證碼無效"); return; }
-        const uid = snap.val().uid;
-
-        // 直接寫入 Firebase (現在規則改好後，這裡就不會再跳出權限錯誤了)
-        db.ref('userStats/' + uid).update({
-            account: acc,
-            password: pwd
-        }).then(() => {
-            db.ref('authCodes/' + code).remove();
-            alert("綁定成功！");
-            location.reload();
-        }).catch(err => {
-            alert("寫入失敗，請確認 Firebase 規則設定：" + err.message);
-        });
-    });
-}
-
-// --- 登入邏輯 (包含錯誤回饋) ---
-function login() {
-    const acc = document.getElementById('loginAcc').value;
-    const pwd = document.getElementById('loginPwd').value;
-    const msg = document.getElementById('loginMsg');
-    
-    if(!acc || !pwd) {
-        msg.innerText = "請輸入帳號與密碼";
-        return;
-    }
-
-    db.ref('userStats').orderByChild('account').equalTo(acc).once('value', snap => {
-        let found = false;
-        snap.forEach(c => {
-            if(c.val().password === pwd) {
-                localStorage.setItem('userAccount', acc);
-                localStorage.setItem('userUid', c.key);
-                found = true;
-                location.reload();
-            }
-        });
-        
-        if(!found) {
-            msg.innerText = "查無此帳號，請確認帳號密碼是否正確，或進行首次綁定";
+        function registerUser(code) {
+            const acc = document.getElementById('newAcc').value;
+            const pwd = document.getElementById('newPwd').value;
+            if (!acc || !pwd) { alert("請輸入帳號與密碼"); return; }
+            db.ref('authCodes/' + code).once('value', snap => {
+                if (!snap.exists()) { alert("驗證碼無效"); return; }
+                const uid = snap.val().uid;
+                db.ref('userStats/' + uid).update({ account: acc, password: pwd }).then(() => {
+                    db.ref('authCodes/' + code).remove();
+                    alert("綁定成功！");
+                    location.reload();
+                });
+            });
         }
-    });
-}
+
+        function login() {
+            const acc = document.getElementById('loginAcc').value;
+            const pwd = document.getElementById('loginPwd').value;
+            const msg = document.getElementById('loginMsg');
+            db.ref('userStats').orderByChild('account').equalTo(acc).once('value', snap => {
+                let found = false;
+                snap.forEach(c => {
+                    if(c.val().password === pwd) {
+                        localStorage.setItem('userAccount', acc);
+                        localStorage.setItem('userUid', c.key);
+                        found = true;
+                        location.reload();
+                    }
+                });
+                if(!found) msg.innerText = "帳號或密碼錯誤";
+            });
+        }
     </script>
 </body>
 </html>

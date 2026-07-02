@@ -11,13 +11,13 @@
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; z-index: 1000; }
         .box { background: var(--panel); padding: 40px; border-radius: 20px; border: 1px solid var(--gold); text-align: center; width: 320px; }
         input { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: white; box-sizing: border-box; border-radius: 8px; }
-        .btn { padding: 10px 20px; background: var(--gold); border: none; cursor: pointer; color: #000; font-weight: bold; border-radius: 5px; margin: 5px; width: 100%; }
+        .btn { padding: 12px; background: var(--gold); border: none; cursor: pointer; color: #000; font-weight: bold; border-radius: 5px; margin: 5px; width: 100%; }
         .btn-sec { background: #444; color: white; }
-        .sidebar { width: 75px; background: #0a0a0a; display: flex; flex-direction: column; align-items: center; padding-top: 40px; border-right: 1px solid var(--border); }
+        .sidebar { width: 80px; background: #0a0a0a; display: flex; flex-direction: column; align-items: center; padding-top: 40px; border-right: 1px solid var(--border); }
         .nav-item { margin-bottom: 35px; cursor: pointer; opacity: 0.3; transition: 0.3s; text-align: center; font-size: 13px; }
         .nav-item.active { opacity: 1; color: var(--gold); border-right: 3px solid var(--gold); }
-        .content-area { flex-grow: 1; overflow-y: auto; padding: 40px; display: none; }
-        .data-card { background: var(--panel); padding: 20px; border-radius: 10px; margin-top: 20px; }
+        .content-area { flex-grow: 1; padding: 40px; display: none; grid-template-columns: 1fr 1fr; gap: 40px; }
+        .panel { background: var(--panel); padding: 25px; border-radius: 15px; border: 1px solid var(--border); }
     </style>
 </head>
 <body>
@@ -32,16 +32,26 @@
 
     <main id="mainApp" class="content-area">
         <nav class="sidebar">
-            <div class="nav-item active" onclick="switchTab(0)">📊<br>資產</div>
+            <div class="nav-item active" onclick="switchTab(0)">📊<br>空間</div>
             <div class="nav-item" onclick="switchTab(1)">🎵<br>歌單</div>
         </nav>
-        <div style="padding:40px;">
-            <h1>歡迎回來，<span id="userNick"></span></h1>
-            <div id="tabContent" class="data-card">正在讀取您的資產...</div>
+        
+        <div id="tab0" class="panel">
+            <h2>個人資產</h2>
+            <div id="assetsInfo">載入中...</div>
+            <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
+            <h2>扭蛋抽獎 (500珍珠/次)</h2>
+            <button class="btn" onclick="drawGacha()">試試手氣</button>
+        </div>
+        
+        <div id="tab1" class="panel" style="display:none;">
+            <h2>目前歌單</h2>
+            <div id="songListDisplay">載入中...</div>
         </div>
     </main>
 
     <script>
+        // 1. 初始化
         if (!firebase.apps.length) {
             firebase.initializeApp({
                 apiKey: "AIzaSyC9Kn4B2Idp3o7cLsUnfQUrm5S81mHI880", 
@@ -49,78 +59,95 @@
             });
         }
         const db = firebase.database();
+        let currentUserUid = localStorage.getItem('userUid');
 
-        // 登入狀態檢查與數據讀取
+        // 2. 頁面載入
         window.onload = () => {
             const acc = localStorage.getItem('userAccount');
             if(acc) {
                 document.getElementById('authModal').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'flex';
-                document.getElementById('userNick').innerText = acc;
+                document.getElementById('mainApp').style.display = 'grid';
                 loadUserData(acc);
             }
         };
 
+        // 3. 資產與抽獎邏輯
         function loadUserData(acc) {
             db.ref('userStats').orderByChild('account').equalTo(acc).once('value', snap => {
                 if(snap.exists()) {
-                    const data = Object.values(snap.val())[0];
-                    document.getElementById('tabContent').innerHTML = `
-                        <p>珍珠數量：${data.stamps || 0} 顆</p>
-                        <p>水票數量：${data.waterTickets || 0} 張</p>
+                    const key = Object.keys(snap.val())[0];
+                    currentUserUid = key;
+                    const data = snap.val()[key];
+                    document.getElementById('assetsInfo').innerHTML = `
+                        <p>珍珠：${data.stamps || 0}</p>
+                        <p>喝水卷：${data.waterTickets || 0}</p>
+                        <p>累積簽到：${data.checkInCount || 0} 次</p>
                     `;
                 }
             });
         }
 
-        function switchTab(index) {
-            document.querySelectorAll('.nav-item').forEach((item, i) => {
-                item.classList.toggle('active', i === index);
-            });
-            const content = document.getElementById('tabContent');
-            if(index === 0) {
-                const acc = localStorage.getItem('userAccount');
-                loadUserData(acc);
-            } else {
-                content.innerHTML = "<p>歌單功能開發中，敬請期待！</p>";
-            }
-        }
-
-        // --- 登入註冊邏輯 ---
-        function resetModal() { document.getElementById('modalContent').innerHTML = `<h2>歡迎來到奶茶茶舖</h2><button class="btn" onclick="showRegister()">首次登入 (綁定)</button><button class="btn" onclick="showLogin()">已有帳密登入</button>`; }
-        
-        function showLogin() {
-            document.getElementById('modalContent').innerHTML = `<h2>帳密登入</h2><input type="text" id="loginAcc" placeholder="輸入帳號"><input type="password" id="loginPwd" placeholder="輸入密碼"><button class="btn" onclick="login()">登入</button><button class="btn btn-sec" onclick="resetModal()">返回</button><p id="loginMsg" style="color:red; font-size:12px;"></p>`;
-        }
-
-        function showRegister() {
-            const code = Math.floor(1000 + Math.random() * 9000);
-            document.getElementById('modalContent').innerHTML = `<h2>身份驗證</h2><p>請在聊天室輸入：</p><h1 style="color:var(--gold)">!綁定 ${code}</h1><div id="regForm" style="display:none;"><input type="text" id="newAcc" placeholder="設定帳號"><input type="password" id="newPwd" placeholder="設定密碼"><button class="btn" onclick="registerUser('${code}')">完成註冊</button></div><button class="btn btn-sec" onclick="resetModal()">返回</button>`;
-            const listener = db.ref('authCodes/' + code).on('value', snap => { if(snap.exists()) { document.getElementById('regForm').style.display = 'block'; db.ref('authCodes/' + code).off('value', listener); } });
-        }
-
-        function registerUser(code) {
-            const acc = document.getElementById('newAcc').value;
-            const pwd = document.getElementById('newPwd').value;
-            if (!acc || !pwd) { alert("請輸入帳號與密碼"); return; }
-            db.ref('authCodes/' + code).once('value', snap => {
-                const uid = snap.val().uid;
-                db.ref('userStats/' + uid).update({ account: acc, password: pwd }).then(() => {
-                    db.ref('authCodes/' + code).remove();
-                    localStorage.setItem('userAccount', acc);
-                    alert("綁定成功！");
+        function drawGacha() {
+            db.ref('userStats/' + currentUserUid).once('value', snap => {
+                const data = snap.val();
+                if ((data.stamps || 0) < 500) { alert("珍珠不足！"); return; }
+                
+                const rand = Math.random() * 100;
+                let prize = 0;
+                if (rand < 30) {
+                    const s = Math.random();
+                    if (s < 0.60) prize = 1;
+                    else if (s < 0.85) prize = 2;
+                    else if (s < 0.95) prize = 3;
+                    else if (s < 0.99) prize = 4;
+                    else prize = 5;
+                }
+                
+                db.ref('userStats/' + currentUserUid).update({
+                    stamps: (data.stamps - 500),
+                    waterTickets: (data.waterTickets || 0) + prize
+                }).then(() => {
+                    alert(prize > 0 ? `恭喜抽中 ${prize} 張喝水卷！` : "銘謝惠顧！");
                     location.reload();
                 });
             });
         }
 
+        // 4. 切換與歌單
+        function switchTab(index) {
+            document.querySelectorAll('.nav-item').forEach((item, i) => item.classList.toggle('active', i === index));
+            document.getElementById('tab0').style.display = index === 0 ? 'block' : 'none';
+            document.getElementById('tab1').style.display = index === 1 ? 'block' : 'none';
+            if(index === 1) {
+                db.ref('songList').once('value', snap => {
+                    let html = "<ul>";
+                    snap.forEach(s => html += `<li>${s.val().name || '未知歌曲'}</li>`);
+                    document.getElementById('songListDisplay').innerHTML = html + "</ul>";
+                });
+            }
+        }
+
+        // 5. 登入邏輯 (略，與前版相同...)
+        function resetModal() { document.getElementById('modalContent').innerHTML = `<h2>歡迎來到奶茶茶舖</h2><button class="btn" onclick="showRegister()">首次登入 (綁定)</button><button class="btn" onclick="showLogin()">已有帳密登入</button>`; }
+        function showLogin() { document.getElementById('modalContent').innerHTML = `<h2>帳密登入</h2><input type="text" id="loginAcc" placeholder="帳號"><input type="password" id="loginPwd" placeholder="密碼"><button class="btn" onclick="login()">登入</button><button class="btn btn-sec" onclick="resetModal()">返回</button>`; }
+        function showRegister() { 
+            const code = Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('modalContent').innerHTML = `<h2>身份驗證</h2><h1 style="color:var(--gold)">!綁定 ${code}</h1><div id="regForm" style="display:none;"><input type="text" id="newAcc" placeholder="設定帳號"><input type="password" id="newPwd" placeholder="設定密碼"><button class="btn" onclick="registerUser('${code}')">完成註冊</button></div><button class="btn btn-sec" onclick="resetModal()">返回</button>`;
+            db.ref('authCodes/' + code).on('value', snap => { if(snap.exists()) document.getElementById('regForm').style.display = 'block'; });
+        }
+        function registerUser(code) {
+            const acc = document.getElementById('newAcc').value; const pwd = document.getElementById('newPwd').value;
+            db.ref('authCodes/' + code).once('value', snap => {
+                const uid = snap.val().uid;
+                db.ref('userStats/' + uid).update({ account: acc, password: pwd }).then(() => {
+                    db.ref('authCodes/' + code).remove(); localStorage.setItem('userAccount', acc); location.reload();
+                });
+            });
+        }
         function login() {
-            const acc = document.getElementById('loginAcc').value;
-            const pwd = document.getElementById('loginPwd').value;
+            const acc = document.getElementById('loginAcc').value; const pwd = document.getElementById('loginPwd').value;
             db.ref('userStats').orderByChild('account').equalTo(acc).once('value', snap => {
-                let found = false;
-                snap.forEach(c => { if(c.val().password === pwd) { localStorage.setItem('userAccount', acc); found = true; location.reload(); } });
-                if(!found) document.getElementById('loginMsg').innerText = "帳號或密碼錯誤";
+                snap.forEach(c => { if(c.val().password === pwd) { localStorage.setItem('userAccount', acc); location.reload(); } });
             });
         }
     </script>

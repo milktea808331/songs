@@ -17,6 +17,7 @@
         .nav-item { margin-bottom: 35px; cursor: pointer; opacity: 0.3; transition: 0.3s; text-align: center; font-size: 13px; }
         .nav-item.active { opacity: 1; color: var(--gold); border-right: 3px solid var(--gold); }
         .content-area { flex-grow: 1; overflow-y: auto; padding: 40px; display: none; }
+        .data-card { background: var(--panel); padding: 20px; border-radius: 10px; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -31,14 +32,16 @@
 
     <main id="mainApp" class="content-area">
         <nav class="sidebar">
-            <div class="nav-item active">📊<br>資產</div>
-            <div class="nav-item">🎵<br>歌單</div>
+            <div class="nav-item active" onclick="switchTab(0)">📊<br>資產</div>
+            <div class="nav-item" onclick="switchTab(1)">🎵<br>歌單</div>
         </nav>
-        <div style="padding:40px;"><h1>歡迎回來，<span id="userNick"></span></h1></div>
+        <div style="padding:40px;">
+            <h1>歡迎回來，<span id="userNick"></span></h1>
+            <div id="tabContent" class="data-card">正在讀取您的資產...</div>
+        </div>
     </main>
 
     <script>
-        // 1. 初始化 Firebase
         if (!firebase.apps.length) {
             firebase.initializeApp({
                 apiKey: "AIzaSyC9Kn4B2Idp3o7cLsUnfQUrm5S81mHI880", 
@@ -47,64 +50,60 @@
         }
         const db = firebase.database();
 
-        // 2. 頁面載入檢查
+        // 登入狀態檢查與數據讀取
         window.onload = () => {
             const acc = localStorage.getItem('userAccount');
             if(acc) {
                 document.getElementById('authModal').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'flex';
                 document.getElementById('userNick').innerText = acc;
+                loadUserData(acc);
             }
         };
 
-        // 3. UI 切換函式
-        function resetModal() {
-            document.getElementById('modalContent').innerHTML = `
-                <h2>歡迎來到奶茶茶舖</h2>
-                <button class="btn" onclick="showRegister()">首次登入 (綁定)</button>
-                <button class="btn" onclick="showLogin()">已有帳密登入</button>
-            `;
-        }
-
-        function showLogin() {
-            document.getElementById('modalContent').innerHTML = `
-                <h2>帳密登入</h2>
-                <input type="text" id="loginAcc" placeholder="輸入帳號">
-                <input type="password" id="loginPwd" placeholder="輸入密碼">
-                <button class="btn" onclick="login()">登入</button>
-                <button class="btn btn-sec" onclick="resetModal()">返回</button>
-                <p id="loginMsg" style="color:red; font-size:12px; margin-top:10px;"></p>
-            `;
-        }
-
-        function showRegister() {
-            const code = Math.floor(1000 + Math.random() * 9000);
-            document.getElementById('modalContent').innerHTML = `
-                <h2>身份驗證</h2>
-                <p>請在聊天室輸入：</p>
-                <h1 style="color:var(--gold)">!綁定 ${code}</h1>
-                <div id="regForm" style="display:none;">
-                    <input type="text" id="newAcc" placeholder="設定帳號">
-                    <input type="password" id="newPwd" placeholder="設定密碼">
-                    <button class="btn" onclick="registerUser('${code}')">完成註冊</button>
-                </div>
-                <button class="btn btn-sec" onclick="resetModal()">返回</button>
-            `;
-            const listener = db.ref('authCodes/' + code).on('value', snap => {
+        function loadUserData(acc) {
+            db.ref('userStats').orderByChild('account').equalTo(acc).once('value', snap => {
                 if(snap.exists()) {
-                    document.getElementById('regForm').style.display = 'block';
-                    db.ref('authCodes/' + code).off('value', listener);
+                    const data = Object.values(snap.val())[0];
+                    document.getElementById('tabContent').innerHTML = `
+                        <p>珍珠數量：${data.stamps || 0} 顆</p>
+                        <p>水票數量：${data.waterTickets || 0} 張</p>
+                    `;
                 }
             });
         }
 
-        // 4. 核心邏輯
+        function switchTab(index) {
+            document.querySelectorAll('.nav-item').forEach((item, i) => {
+                item.classList.toggle('active', i === index);
+            });
+            const content = document.getElementById('tabContent');
+            if(index === 0) {
+                const acc = localStorage.getItem('userAccount');
+                loadUserData(acc);
+            } else {
+                content.innerHTML = "<p>歌單功能開發中，敬請期待！</p>";
+            }
+        }
+
+        // --- 登入註冊邏輯 ---
+        function resetModal() { document.getElementById('modalContent').innerHTML = `<h2>歡迎來到奶茶茶舖</h2><button class="btn" onclick="showRegister()">首次登入 (綁定)</button><button class="btn" onclick="showLogin()">已有帳密登入</button>`; }
+        
+        function showLogin() {
+            document.getElementById('modalContent').innerHTML = `<h2>帳密登入</h2><input type="text" id="loginAcc" placeholder="輸入帳號"><input type="password" id="loginPwd" placeholder="輸入密碼"><button class="btn" onclick="login()">登入</button><button class="btn btn-sec" onclick="resetModal()">返回</button><p id="loginMsg" style="color:red; font-size:12px;"></p>`;
+        }
+
+        function showRegister() {
+            const code = Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('modalContent').innerHTML = `<h2>身份驗證</h2><p>請在聊天室輸入：</p><h1 style="color:var(--gold)">!綁定 ${code}</h1><div id="regForm" style="display:none;"><input type="text" id="newAcc" placeholder="設定帳號"><input type="password" id="newPwd" placeholder="設定密碼"><button class="btn" onclick="registerUser('${code}')">完成註冊</button></div><button class="btn btn-sec" onclick="resetModal()">返回</button>`;
+            const listener = db.ref('authCodes/' + code).on('value', snap => { if(snap.exists()) { document.getElementById('regForm').style.display = 'block'; db.ref('authCodes/' + code).off('value', listener); } });
+        }
+
         function registerUser(code) {
             const acc = document.getElementById('newAcc').value;
             const pwd = document.getElementById('newPwd').value;
             if (!acc || !pwd) { alert("請輸入帳號與密碼"); return; }
             db.ref('authCodes/' + code).once('value', snap => {
-                if (!snap.exists()) { alert("驗證碼無效"); return; }
                 const uid = snap.val().uid;
                 db.ref('userStats/' + uid).update({ account: acc, password: pwd }).then(() => {
                     db.ref('authCodes/' + code).remove();
@@ -118,17 +117,10 @@
         function login() {
             const acc = document.getElementById('loginAcc').value;
             const pwd = document.getElementById('loginPwd').value;
-            const msg = document.getElementById('loginMsg');
             db.ref('userStats').orderByChild('account').equalTo(acc).once('value', snap => {
                 let found = false;
-                snap.forEach(c => {
-                    if(c.val().password === pwd) {
-                        localStorage.setItem('userAccount', acc);
-                        found = true;
-                        location.reload();
-                    }
-                });
-                if(!found) msg.innerText = "帳號或密碼錯誤";
+                snap.forEach(c => { if(c.val().password === pwd) { localStorage.setItem('userAccount', acc); found = true; location.reload(); } });
+                if(!found) document.getElementById('loginMsg').innerText = "帳號或密碼錯誤";
             });
         }
     </script>

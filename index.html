@@ -67,6 +67,7 @@
             const content = document.getElementById('tabContent');
             
             if(index === 0) {
+                // 資產頁面邏輯保持不變
                 const acc = localStorage.getItem('userAccount');
                 db.ref('userStats').orderByChild('account').equalTo(acc).once('value', snap => {
                     if(snap.exists()) {
@@ -79,11 +80,16 @@
                     }
                 });
             } else {
+                // 歌單頁面：修正為讀取 title 欄位
                 content.innerHTML = "<p>載入歌單中...</p>";
                 db.ref('songList').once('value', snap => {
                     if(snap.exists()) {
                         let html = "<ul>";
-                        snap.forEach(s => html += `<li>${s.val().name || '未知歌曲'}</li>`);
+                        // 修正：將 s.val().name 改為 s.val().title
+                        snap.forEach(s => {
+                            const song = s.val();
+                            html += `<li>${song.title || '未知歌曲'}</li>`;
+                        });
                         content.innerHTML = html + "</ul>";
                     } else { content.innerHTML = "<p>目前沒有歌單資料。</p>"; }
                 });
